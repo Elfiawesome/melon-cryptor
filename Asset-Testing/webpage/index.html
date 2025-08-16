@@ -233,12 +233,12 @@
 			<form id="unlock-form">
 				<div class="form-group">
 					<label for="vault-url">Vault Base URL</label>
-					<input type="url" id="vault-url" value="https://raw.githubusercontent.com/Elfiawesome/melon-cryptor/refs/heads/main/Asset-Testing/vault-debug/"
+					<input type="url" id="vault-url" value=""
 						placeholder="e.g., https://example.com/my-vault/" required>
 				</div>
 				<div class="form-group">
 					<label for="vault-password">Password</label>
-					<input type="password" id="vault-password" value="supersecretpassword999" required>
+					<input type="password" id="vault-password" value="" required>
 				</div>
 				<button type="submit" class="btn" id="unlock-btn">Unlock Vault</button>
 				<div id="error-message" class="error-message"></div>
@@ -459,6 +459,7 @@
 				mimeType.startsWith('video/') ||
 				mimeType.startsWith('audio/') ||
 				mimeType === 'application/pdf' ||
+				mimeType === 'application/json' ||
 				mimeType === 'text/plain' ||
 				mimeType === 'text/html' ||
 				mimeType === 'text/css' ||
@@ -480,7 +481,6 @@
 				'pdf': 'application/pdf',
 				'txt': 'text/plain', 'html': 'text/html', 'css': 'text/css', 'js': 'text/javascript',
 				'json': 'application/json',
-				// Add more as needed
 			};
 			return mimeTypes[extension] || 'application/octet-stream'; // Default for downloads
 		}
