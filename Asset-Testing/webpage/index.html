@@ -5,42 +5,521 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>MelonCryptor Vault Viewer</title>
-	<link rel="stylesheet" href="style.css">
+	<style>
+		:root {
+			--bg-color: #121212;
+			--surface-color: #1e1e1e;
+			--primary-color: #4CAF50;
+			/* A 'melon' green */
+			--primary-hover-color: #66bb6a;
+			--text-color: #e0e0e0;
+			--text-muted-color: #888;
+			--border-color: #333;
+			--error-color: #f44336;
+		}
+
+		@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+		* {
+			box-sizing: border-box;
+			margin: 0;
+			padding: 0;
+		}
+
+		html,
+		body {
+			font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+			background-color: var(--bg-color);
+			color: var(--text-color);
+			line-height: 1.6;
+			height: 100%;
+		}
+
+		.container {
+			max-width: 800px;
+			margin: 2rem auto;
+			padding: 2rem;
+		}
+
+		header {
+			text-align: center;
+			margin-bottom: 2.5rem;
+		}
+
+		header h1 {
+			font-size: 2.5rem;
+			font-weight: 600;
+			color: var(--primary-color);
+			letter-spacing: -1px;
+		}
+
+		header h1 .logo {
+			display: inline-block;
+			transform: rotate(-15deg);
+		}
+
+		header p {
+			color: var(--text-muted-color);
+		}
+
+		.card {
+			background-color: var(--surface-color);
+			border: 1px solid var(--border-color);
+			border-radius: 8px;
+			padding: 2rem;
+			box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+		}
+
+		.form-group {
+			margin-bottom: 1.5rem;
+		}
+
+		.form-group label {
+			display: block;
+			margin-bottom: 0.5rem;
+			font-weight: 600;
+		}
+
+		.form-group input {
+			width: 100%;
+			padding: 0.75rem;
+			background-color: var(--bg-color);
+			border: 1px solid var(--border-color);
+			border-radius: 6px;
+			color: var(--text-color);
+			font-size: 1rem;
+			transition: border-color 0.2s, box-shadow 0.2s;
+		}
+
+		.form-group input:focus {
+			outline: none;
+			border-color: var(--primary-color);
+			box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+		}
+
+		.btn {
+			display: block;
+			width: 100%;
+			padding: 0.8rem 1rem;
+			background-color: var(--primary-color);
+			color: #fff;
+			border: none;
+			border-radius: 6px;
+			font-size: 1.1rem;
+			font-weight: 600;
+			cursor: pointer;
+			transition: background-color 0.2s;
+		}
+
+		.btn:hover {
+			background-color: var(--primary-hover-color);
+		}
+
+		.error-message {
+			color: var(--error-color);
+			background-color: rgba(244, 67, 54, 0.1);
+			border: 1px solid var(--error-color);
+			border-radius: 6px;
+			padding: 0.75rem;
+			margin-top: 1rem;
+			text-align: center;
+			display: none;
+			/* Hidden by default */
+		}
+
+		#vault-viewer-section {
+			display: none;
+			/* Hidden by default */
+		}
+
+		#vault-header {
+			margin-bottom: 1.5rem;
+			padding-bottom: 1rem;
+			border-bottom: 1px solid var(--border-color);
+		}
+
+		#vault-header h2 {
+			word-break: break-all;
+		}
+
+		#vault-header h2 small {
+			display: block;
+			font-size: 1rem;
+			font-weight: 400;
+			color: var(--text-muted-color);
+			margin-top: 0.25rem;
+		}
+
+		#file-browser {
+			list-style: none;
+			padding-left: 0;
+		}
+
+		#file-browser ul {
+			list-style: none;
+			padding-left: 20px;
+		}
+
+		#file-browser li {
+			padding: 6px 8px;
+			border-radius: 4px;
+			cursor: pointer;
+			transition: background-color 0.2s;
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		#file-browser li:hover {
+			background-color: rgba(255, 255, 255, 0.05);
+		}
+
+		.folder>.folder-header::before {
+			content: '📁';
+			margin-right: 10px;
+		}
+
+		.folder>.folder-header.collapsed::before {
+			content: '📂';
+		}
+
+		.file::before {
+			content: '📄';
+			margin-right: 10px;
+		}
+
+		.folder>ul {
+			display: none;
+			/* Collapsed by default */
+		}
+
+		.folder.expanded>ul {
+			display: block;
+		}
+
+		.status {
+			color: var(--text-muted-color);
+			font-size: 0.9em;
+			margin-left: auto;
+		}
+
+		@keyframes spin {
+			to {
+				transform: rotate(360deg);
+			}
+		}
+
+		.spinner {
+			display: inline-block;
+			width: 1em;
+			height: 1em;
+			border: 2px solid currentColor;
+			border-right-color: transparent;
+			border-radius: 50%;
+			animation: spin .75s linear infinite;
+		}
+	</style>
 </head>
 
 <body>
+
 	<div class="container">
 		<header>
-			<h1>MelonCryptor Vault Viewer</h1>
-			<p>Select your vault directory and enter the password to view its contents. All decryption happens locally
-				in your browser.</p>
+			<h1><span class="logo">🍉</span> MelonCryptor</h1>
+			<p>A secure, client-side vault viewer</p>
 		</header>
 
-		<div class="controls">
-			<input type="password" id="passwordInput" placeholder="Enter vault password">
-			<button id="openVaultBtn">Open Vault</button>
+		<div id="unlock-vault-section" class="card">
+			<form id="unlock-form">
+				<div class="form-group">
+					<label for="vault-url">Vault Base URL</label>
+					<input type="url" id="vault-url" value="https://raw.githubusercontent.com/Elfiawesome/melon-cryptor/refs/heads/main/Asset-Testing/vault-debug/"
+						placeholder="e.g., https://example.com/my-vault/" required>
+				</div>
+				<div class="form-group">
+					<label for="vault-password">Password</label>
+					<input type="password" id="vault-password" value="supersecretpassword999" required>
+				</div>
+				<button type="submit" class="btn" id="unlock-btn">Unlock Vault</button>
+				<div id="error-message" class="error-message"></div>
+			</form>
 		</div>
 
-		<div id="status" class="status"></div>
-
-		<div class="file-list-container">
-			<h2>Vault Files</h2>
-			<table id="fileList">
-				<thead>
-					<tr>
-						<th>Original Filename</th>
-						<th>Vault Path</th>
-						<th>Action</th>
-					</tr>
-				</thead>
-				<tbody>
-					<!-- File entries will be injected here by JavaScript -->
-				</tbody>
-			</table>
+		<div id="vault-viewer-section" class="card">
+			<div id="vault-header">
+				<h2 id="vault-title"><small>Viewing Vault:</small></h2>
+			</div>
+			<ul id="file-browser">
+				<!-- File tree will be generated here -->
+			</ul>
 		</div>
 	</div>
 
-	<script src="viewer.js"></script>
+	<script>
+		// --- DOM Elements ---
+		const unlockSection = document.getElementById('unlock-vault-section');
+		const viewerSection = document.getElementById('vault-viewer-section');
+		const unlockForm = document.getElementById('unlock-form');
+		const unlockBtn = document.getElementById('unlock-btn');
+		const vaultUrlInput = document.getElementById('vault-url');
+		const passwordInput = document.getElementById('vault-password');
+		const errorMessageDiv = document.getElementById('error-message');
+		const vaultTitle = document.getElementById('vault-title');
+		const fileBrowser = document.getElementById('file-browser');
+
+		let cryptoKey = null;
+		let vaultBaseUrl = '';
+
+		// --- Core Cryptography Functions (matching C# implementation) ---
+
+		/**
+		 * Derives a 256-bit AES key from a password using SHA-256.
+		 * @param {string} password The user's password.
+		 * @returns {Promise<CryptoKey>} A key suitable for AES-CBC decryption.
+		 */
+		async function deriveKey(password) {
+			const encoder = new TextEncoder();
+			const passwordBuffer = encoder.encode(password);
+			const hashBuffer = await crypto.subtle.digest('SHA-256', passwordBuffer);
+			// We need to import the raw hash as a key for AES-CBC
+			return crypto.subtle.importKey(
+				'raw',
+				hashBuffer,
+				{ name: 'AES-CBC' },
+				false, // not extractable
+				['decrypt']
+			);
+		}
+
+		/**
+		 * Decrypts data using AES-CBC. Assumes IV is prepended to the ciphertext.
+		 * @param {ArrayBuffer} encryptedData The encrypted data, with 16-byte IV at the start.
+		 * @param {CryptoKey} key The AES key derived from the password.
+		 * @returns {Promise<ArrayBuffer>} The decrypted data.
+		 */
+		async function decrypt(encryptedData, key) {
+			// The IV is the first 16 bytes, as used by AES in C#
+			const iv = encryptedData.slice(0, 16);
+			const ciphertext = encryptedData.slice(16);
+
+			return crypto.subtle.decrypt(
+				{
+					name: 'AES-CBC',
+					iv: iv
+				},
+				key,
+				ciphertext
+			);
+		}
+
+		// --- UI and Application Logic ---
+
+		unlockForm.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const password = passwordInput.value;
+			vaultBaseUrl = vaultUrlInput.value;
+
+			if (!vaultBaseUrl.endsWith('/')) {
+				vaultBaseUrl += '/';
+			}
+
+			setLoadingState(true);
+			hideError();
+
+			try {
+				// 1. Derive the key from the password
+				cryptoKey = await deriveKey(password);
+
+				// 2. Fetch the encrypted index file
+				const indexUrl = new URL('index.menc.json', vaultBaseUrl);
+				const response = await fetch(indexUrl);
+
+				if (!response.ok) {
+					throw new Error(`Failed to fetch index file. Status: ${response.status}`);
+				}
+				const encryptedIndexData = await response.arrayBuffer();
+
+				// 3. Decrypt the index file
+				let decryptedIndexBytes;
+				try {
+					decryptedIndexBytes = await decrypt(encryptedIndexData, cryptoKey);
+				} catch (error) {
+					// This catch is critical - it usually fails here for a wrong password
+					console.error('Decryption failed:', error);
+					throw new Error("Invalid password or corrupted vault index.");
+				}
+
+				// 4. Parse the index JSON
+				const decoder = new TextDecoder();
+				const indexJson = decoder.decode(decryptedIndexBytes);
+				const index = JSON.parse(indexJson);
+
+				if (!index.Success) {
+					throw new Error("Vault index indicates failure. It might be corrupted.");
+				}
+
+				// 5. Render the file browser and switch views
+				renderFileBrowser(index.Files);
+				vaultTitle.innerHTML += vaultBaseUrl;
+				unlockSection.style.display = 'none';
+				viewerSection.style.display = 'block';
+
+			} catch (error) {
+				showError(error.message);
+			} finally {
+				setLoadingState(false);
+			}
+		});
+
+		/**
+		 * Renders the file and folder structure into the DOM.
+		 * @param {Object} files - The 'Files' dictionary from the index.
+		 */
+		function renderFileBrowser(files) {
+			const fileTree = {};
+			// Build a hierarchical object from the flat path list
+			for (const path in files) {
+				const fileInfo = files[path];
+				const parts = path.split(/[\\/]/); // Split by slash or backslash
+				let currentLevel = fileTree;
+
+				for (let i = 0; i < parts.length - 1; i++) {
+					const part = parts[i];
+					if (!currentLevel[part]) {
+						currentLevel[part] = { _isFolder: true, _children: {} };
+					}
+					currentLevel = currentLevel[part]._children;
+				}
+				const fileName = parts[parts.length - 1];
+				currentLevel[fileName] = { ...fileInfo, _isFolder: false };
+			}
+
+			fileBrowser.innerHTML = ''; // Clear previous content
+			const treeElement = createTreeElement(fileTree);
+			fileBrowser.appendChild(treeElement);
+		}
+
+		/**
+		 * Recursively creates UL/LI elements from the file tree object.
+		 * @param {Object} treeNode - The current node in the file tree.
+		 * @returns {HTMLUListElement} The generated list element.
+		 */
+		function createTreeElement(treeNode) {
+			const ul = document.createElement('ul');
+
+			const sortedKeys = Object.keys(treeNode).sort((a, b) => {
+				const nodeA = treeNode[a];
+				const nodeB = treeNode[b];
+				// Folders first, then files, then alphabetical
+				if (nodeA._isFolder && !nodeB._isFolder) return -1;
+				if (!nodeA._isFolder && nodeB._isFolder) return 1;
+				return a.localeCompare(b);
+			});
+
+			for (const key of sortedKeys) {
+				const node = treeNode[key];
+				const li = document.createElement('li');
+
+				if (node._isFolder) {
+					li.className = 'folder';
+
+					const header = document.createElement('div');
+					header.className = 'folder-header';
+					header.textContent = key;
+					header.addEventListener('click', () => {
+						li.classList.toggle('expanded');
+						header.classList.toggle('collapsed');
+					});
+
+					li.appendChild(header);
+					li.appendChild(createTreeElement(node._children));
+				} else {
+					li.className = 'file';
+					li.textContent = node.FileName; // Display original file name
+					li.dataset.vaultPath = node.VaultPath;
+					li.addEventListener('click', handleFileClick);
+				}
+				ul.appendChild(li);
+			}
+			return ul;
+		}
+
+		/**
+		 * Handles clicking a file: fetches, decrypts, and triggers download.
+		 * @param {Event} event - The click event.
+		 */
+		async function handleFileClick(event) {
+			const fileElement = event.currentTarget;
+			const vaultPath = fileElement.dataset.vaultPath;
+
+			// Add a status indicator
+			const originalText = fileElement.innerHTML;
+			const statusSpan = document.createElement('span');
+			statusSpan.className = 'status';
+			fileElement.appendChild(statusSpan);
+
+			try {
+				statusSpan.innerHTML = '<span class="spinner"></span>';
+				fileElement.style.pointerEvents = 'none'; // Disable clicking during process
+
+				// 1. Fetch encrypted file
+				const fileUrl = new URL(vaultPath, vaultBaseUrl);
+				const response = await fetch(fileUrl);
+				if (!response.ok) {
+					throw new Error(`File not found at ${fileUrl}`);
+				}
+				const encryptedFileData = await response.arrayBuffer();
+
+				// 2. Decrypt
+				statusSpan.textContent = 'Decrypting...';
+				const decryptedFileBytes = await decrypt(encryptedFileData, cryptoKey);
+
+				// 3. Trigger Download
+				const blob = new Blob([decryptedFileBytes]);
+				const objectUrl = URL.createObjectURL(blob);
+
+				const a = document.createElement('a');
+				a.href = objectUrl;
+				a.download = fileElement.textContent.replace('Decrypting...', '').trim(); // Use original filename
+				document.body.appendChild(a);
+				a.click();
+
+				// 4. Cleanup
+				document.body.removeChild(a);
+				URL.revokeObjectURL(objectUrl);
+
+				fileElement.innerHTML = originalText;
+				fileElement.style.pointerEvents = 'auto';
+
+			} catch (error) {
+				console.error(`Error processing file ${vaultPath}:`, error);
+				statusSpan.textContent = 'Error!';
+				statusSpan.style.color = 'var(--error-color)';
+				fileElement.style.pointerEvents = 'auto';
+				setTimeout(() => {
+					fileElement.innerHTML = originalText;
+				}, 3000);
+			}
+		}
+
+
+		// --- Helper Functions ---
+
+		function setLoadingState(isLoading) {
+			unlockBtn.disabled = isLoading;
+			unlockBtn.textContent = isLoading ? 'Unlocking...' : 'Unlock Vault';
+		}
+
+		function showError(message) {
+			errorMessageDiv.textContent = message;
+			errorMessageDiv.style.display = 'block';
+		}
+
+		function hideError() {
+			errorMessageDiv.style.display = 'none';
+		}
+
+	</script>
 </body>
 
 </html>
