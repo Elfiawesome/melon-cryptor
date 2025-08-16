@@ -272,44 +272,19 @@
 
 		// --- Core Cryptography Functions (matching C# implementation) ---
 
-		/**
-		 * Derives a 256-bit AES key from a password using SHA-256.
-		 * @param {string} password The user's password.
-		 * @returns {Promise<CryptoKey>} A key suitable for AES-CBC decryption.
-		 */
 		async function deriveKey(password) {
 			const encoder = new TextEncoder();
 			const passwordBuffer = encoder.encode(password);
 			const hashBuffer = await crypto.subtle.digest('SHA-256', passwordBuffer);
-			// We need to import the raw hash as a key for AES-CBC
 			return crypto.subtle.importKey(
-				'raw',
-				hashBuffer,
-				{ name: 'AES-CBC' },
-				false, // not extractable
-				['decrypt']
+				'raw', hashBuffer, { name: 'AES-CBC' }, false, ['decrypt']
 			);
 		}
 
-		/**
-		 * Decrypts data using AES-CBC. Assumes IV is prepended to the ciphertext.
-		 * @param {ArrayBuffer} encryptedData The encrypted data, with 16-byte IV at the start.
-		 * @param {CryptoKey} key The AES key derived from the password.
-		 * @returns {Promise<ArrayBuffer>} The decrypted data.
-		 */
 		async function decrypt(encryptedData, key) {
-			// The IV is the first 16 bytes, as used by AES in C#
 			const iv = encryptedData.slice(0, 16);
 			const ciphertext = encryptedData.slice(16);
-
-			return crypto.subtle.decrypt(
-				{
-					name: 'AES-CBC',
-					iv: iv
-				},
-				key,
-				ciphertext
-			);
+			return crypto.subtle.decrypt({ name: 'AES-CBC', iv }, key, ciphertext);
 		}
 
 		// --- UI and Application Logic ---
@@ -318,52 +293,33 @@
 			e.preventDefault();
 			const password = passwordInput.value;
 			vaultBaseUrl = vaultUrlInput.value;
-
-			if (!vaultBaseUrl.endsWith('/')) {
-				vaultBaseUrl += '/';
-			}
-
+			if (!vaultBaseUrl.endsWith('/')) vaultBaseUrl += '/';
 			setLoadingState(true);
 			hideError();
 
 			try {
-				// 1. Derive the key from the password
 				cryptoKey = await deriveKey(password);
-
-				// 2. Fetch the encrypted index file
 				const indexUrl = new URL('index.menc.json', vaultBaseUrl);
 				const response = await fetch(indexUrl);
-
-				if (!response.ok) {
-					throw new Error(`Failed to fetch index file. Status: ${response.status}`);
-				}
+				if (!response.ok) throw new Error(`Failed to fetch index. Status: ${response.status}`);
 				const encryptedIndexData = await response.arrayBuffer();
 
-				// 3. Decrypt the index file
 				let decryptedIndexBytes;
 				try {
 					decryptedIndexBytes = await decrypt(encryptedIndexData, cryptoKey);
 				} catch (error) {
-					// This catch is critical - it usually fails here for a wrong password
-					console.error('Decryption failed:', error);
 					throw new Error("Invalid password or corrupted vault index.");
 				}
 
-				// 4. Parse the index JSON
 				const decoder = new TextDecoder();
 				const indexJson = decoder.decode(decryptedIndexBytes);
 				const index = JSON.parse(indexJson);
+				if (!index.Success) throw new Error("Vault index indicates failure.");
 
-				if (!index.Success) {
-					throw new Error("Vault index indicates failure. It might be corrupted.");
-				}
-
-				// 5. Render the file browser and switch views
 				renderFileBrowser(index.Files);
 				vaultTitle.innerHTML += vaultBaseUrl;
 				unlockSection.style.display = 'none';
 				viewerSection.style.display = 'block';
-
 			} catch (error) {
 				showError(error.message);
 			} finally {
@@ -371,18 +327,12 @@
 			}
 		});
 
-		/**
-		 * Renders the file and folder structure into the DOM.
-		 * @param {Object} files - The 'Files' dictionary from the index.
-		 */
 		function renderFileBrowser(files) {
 			const fileTree = {};
-			// Build a hierarchical object from the flat path list
 			for (const path in files) {
 				const fileInfo = files[path];
-				const parts = path.split(/[\\/]/); // Split by slash or backslash
+				const parts = path.split(/[\\/]/);
 				let currentLevel = fileTree;
-
 				for (let i = 0; i < parts.length - 1; i++) {
 					const part = parts[i];
 					if (!currentLevel[part]) {
@@ -393,24 +343,15 @@
 				const fileName = parts[parts.length - 1];
 				currentLevel[fileName] = { ...fileInfo, _isFolder: false };
 			}
-
-			fileBrowser.innerHTML = ''; // Clear previous content
-			const treeElement = createTreeElement(fileTree);
-			fileBrowser.appendChild(treeElement);
+			fileBrowser.innerHTML = '';
+			fileBrowser.appendChild(createTreeElement(fileTree));
 		}
 
-		/**
-		 * Recursively creates UL/LI elements from the file tree object.
-		 * @param {Object} treeNode - The current node in the file tree.
-		 * @returns {HTMLUListElement} The generated list element.
-		 */
 		function createTreeElement(treeNode) {
 			const ul = document.createElement('ul');
-
 			const sortedKeys = Object.keys(treeNode).sort((a, b) => {
 				const nodeA = treeNode[a];
 				const nodeB = treeNode[b];
-				// Folders first, then files, then alphabetical
 				if (nodeA._isFolder && !nodeB._isFolder) return -1;
 				if (!nodeA._isFolder && nodeB._isFolder) return 1;
 				return a.localeCompare(b);
@@ -419,10 +360,8 @@
 			for (const key of sortedKeys) {
 				const node = treeNode[key];
 				const li = document.createElement('li');
-
 				if (node._isFolder) {
 					li.className = 'folder';
-
 					const header = document.createElement('div');
 					header.className = 'folder-header';
 					header.textContent = key;
@@ -430,13 +369,13 @@
 						li.classList.toggle('expanded');
 						header.classList.toggle('collapsed');
 					});
-
 					li.appendChild(header);
 					li.appendChild(createTreeElement(node._children));
 				} else {
 					li.className = 'file';
-					li.textContent = node.FileName; // Display original file name
+					li.textContent = node.FileName;
 					li.dataset.vaultPath = node.VaultPath;
+					li.dataset.originalFilename = node.FileName; // Store original name for MIME typing
 					li.addEventListener('click', handleFileClick);
 				}
 				ul.appendChild(li);
@@ -445,65 +384,106 @@
 		}
 
 		/**
-		 * Handles clicking a file: fetches, decrypts, and triggers download.
-		 * @param {Event} event - The click event.
+		 * NEW: Handles clicking a file: fetches, decrypts, and either opens in a new tab or downloads.
 		 */
 		async function handleFileClick(event) {
 			const fileElement = event.currentTarget;
 			const vaultPath = fileElement.dataset.vaultPath;
+			const originalFilename = fileElement.dataset.originalFilename;
 
-			// Add a status indicator
-			const originalText = fileElement.innerHTML;
 			const statusSpan = document.createElement('span');
 			statusSpan.className = 'status';
+			const originalHTML = fileElement.innerHTML; // Store original content without status
+			fileElement.innerHTML = `<span>${originalFilename}</span>`;
 			fileElement.appendChild(statusSpan);
 
 			try {
 				statusSpan.innerHTML = '<span class="spinner"></span>';
-				fileElement.style.pointerEvents = 'none'; // Disable clicking during process
+				fileElement.style.pointerEvents = 'none';
 
-				// 1. Fetch encrypted file
 				const fileUrl = new URL(vaultPath, vaultBaseUrl);
 				const response = await fetch(fileUrl);
-				if (!response.ok) {
-					throw new Error(`File not found at ${fileUrl}`);
-				}
+				if (!response.ok) throw new Error(`File not found`);
 				const encryptedFileData = await response.arrayBuffer();
 
-				// 2. Decrypt
 				statusSpan.textContent = 'Decrypting...';
 				const decryptedFileBytes = await decrypt(encryptedFileData, cryptoKey);
 
-				// 3. Trigger Download
-				const blob = new Blob([decryptedFileBytes]);
-				const objectUrl = URL.createObjectURL(blob);
+				const mimeType = getMimeType(originalFilename);
+				const blob = new Blob([decryptedFileBytes], { type: mimeType });
 
-				const a = document.createElement('a');
-				a.href = objectUrl;
-				a.download = fileElement.textContent.replace('Decrypting...', '').trim(); // Use original filename
-				document.body.appendChild(a);
-				a.click();
+				if (isMimeTypeViewable(mimeType)) {
+					statusSpan.textContent = 'Opening...';
+					const objectUrl = URL.createObjectURL(blob);
+					window.open(objectUrl, '_blank');
+					// We don't revoke the URL here, as the new tab needs it.
+					// The browser will garbage collect it when the tab is closed.
+				} else {
+					// Fallback to download for non-viewable types
+					statusSpan.textContent = 'Downloading...';
+					const objectUrl = URL.createObjectURL(blob);
+					const a = document.createElement('a');
+					a.href = objectUrl;
+					a.download = originalFilename;
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+					URL.revokeObjectURL(objectUrl); // Can revoke immediately after download starts
+				}
 
-				// 4. Cleanup
-				document.body.removeChild(a);
-				URL.revokeObjectURL(objectUrl);
-
-				fileElement.innerHTML = originalText;
-				fileElement.style.pointerEvents = 'auto';
+				setTimeout(() => { // Restore element after a short delay
+					fileElement.innerHTML = originalHTML;
+					fileElement.style.pointerEvents = 'auto';
+				}, 1000);
 
 			} catch (error) {
 				console.error(`Error processing file ${vaultPath}:`, error);
-				statusSpan.textContent = 'Error!';
+				statusSpan.textContent = `Error!`;
 				statusSpan.style.color = 'var(--error-color)';
 				fileElement.style.pointerEvents = 'auto';
 				setTimeout(() => {
-					fileElement.innerHTML = originalText;
+					fileElement.innerHTML = originalHTML;
 				}, 3000);
 			}
 		}
 
-
 		// --- Helper Functions ---
+
+		/**
+		 * NEW: Determines if a MIME type can be rendered directly by the browser.
+		 * @param {string} mimeType The MIME type string.
+		 * @returns {boolean} True if the type is viewable.
+		 */
+		function isMimeTypeViewable(mimeType) {
+			return mimeType.startsWith('image/') ||
+				mimeType.startsWith('video/') ||
+				mimeType.startsWith('audio/') ||
+				mimeType === 'application/pdf' ||
+				mimeType === 'text/plain' ||
+				mimeType === 'text/html' ||
+				mimeType === 'text/css' ||
+				mimeType === 'text/javascript';
+		}
+
+		/**
+		 * NEW: Gets the MIME type from a filename based on its extension.
+		 * @param {string} filename The full filename.
+		 * @returns {string} The corresponding MIME type.
+		 */
+		function getMimeType(filename) {
+			const extension = filename.slice(((filename.lastIndexOf(".") - 1) >>> 0) + 2).toLowerCase();
+			const mimeTypes = {
+				'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+				'gif': 'image/gif', 'svg': 'image/svg+xml', 'webp': 'image/webp',
+				'mp4': 'video/mp4', 'webm': 'video/webm', 'ogg': 'video/ogg',
+				'mp3': 'audio/mpeg', 'wav': 'audio/wav',
+				'pdf': 'application/pdf',
+				'txt': 'text/plain', 'html': 'text/html', 'css': 'text/css', 'js': 'text/javascript',
+				'json': 'application/json',
+				// Add more as needed
+			};
+			return mimeTypes[extension] || 'application/octet-stream'; // Default for downloads
+		}
 
 		function setLoadingState(isLoading) {
 			unlockBtn.disabled = isLoading;
