@@ -1,2 +1,2 @@
-# melon-cryptor
+# Melon Cryptor
 Local Encrypted Storage 
