@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>MelonCryptor Vault Viewer</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+	<div class="container">
+		<header>
+			<h1>MelonCryptor Vault Viewer</h1>
+			<p>Select your vault directory and enter the password to view its contents. All decryption happens locally
+				in your browser.</p>
+		</header>
+
+		<div class="controls">
+			<input type="password" id="passwordInput" placeholder="Enter vault password">
+			<button id="openVaultBtn">Open Vault</button>
+		</div>
+
+		<div id="status" class="status"></div>
+
+		<div class="file-list-container">
+			<h2>Vault Files</h2>
+			<table id="fileList">
+				<thead>
+					<tr>
+						<th>Original Filename</th>
+						<th>Vault Path</th>
+						<th>Action</th>
+					</tr>
+				</thead>
+				<tbody>
+					<!-- File entries will be injected here by JavaScript -->
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	<script src="viewer.js"></script>
+</body>
+
+</html>
