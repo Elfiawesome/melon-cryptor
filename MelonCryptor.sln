@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MelonCryptorCLI", "MelonCryptorCLI\MelonCryptorCLI.csproj", "{3CEC03DA-3E1C-4583-B830-E8953C45D236}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MelonCryptorServer", "MelonCryptorServer\MelonCryptorServer.csproj", "{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,18 @@ Global
 		{3CEC03DA-3E1C-4583-B830-E8953C45D236}.Release|x64.Build.0 = Release|Any CPU
 		{3CEC03DA-3E1C-4583-B830-E8953C45D236}.Release|x86.ActiveCfg = Release|Any CPU
 		{3CEC03DA-3E1C-4583-B830-E8953C45D236}.Release|x86.Build.0 = Release|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Debug|x64.Build.0 = Debug|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Debug|x86.Build.0 = Debug|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Release|x64.ActiveCfg = Release|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Release|x64.Build.0 = Release|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Release|x86.ActiveCfg = Release|Any CPU
+		{525F9D40-3D89-4606-928A-6B5AF4E8AC4E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
