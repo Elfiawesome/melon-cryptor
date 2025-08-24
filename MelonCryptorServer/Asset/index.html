@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Melon Cryptor Vault</title>
+	<link rel="stylesheet" href="style/base.css">
+	<link rel="stylesheet" href="style/login-access.css">
+	<link rel="stylesheet" href="style/file-explorer.css">
+
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+
+	<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+	<script src="index.js"></script>
+</head>
+
+<body>
+	<div class="main-container">
+		<main class="login-access-container">
+			<div class="login-access-panel">
+				<h1>🍈Melon Cryptor Editor</h1>
+				<p>Please select a folder and enter the password to open a vault.</p>
+				<form class="access-form">
+					<div class="form-item">
+						<label for="vault-path-input">Vault Path</label>
+						<input type="text" id="vault-path-input" name="vault-path" required
+							value="C:\Users\elfia\OneDrive\Desktop\vault">
+					</div>
+
+					<div class="form-item">
+						<label for="password-input">Password</label>
+						<input type="password" id="password-input" name="password" required value="123">
+					</div>
+
+					<button type="submit" id="open-vault-submit">Open</button>
+					<button type="submit" id="create-vault-submit">Create</button>
+				</form>
+			</div>
+		</main>
+	</div>
+
+	<div class="main-container bottom">
+
+
+
+	</div>
+</body>
+
+</html>

@@ -8,6 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MelonCryptorCLI\MelonCryptorCLI.csproj" />
+    <ProjectReference Include="..\MelonCryptor\MelonCryptor.csproj" />
   </ItemGroup>
 </Project>

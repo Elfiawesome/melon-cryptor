@@ -1,24 +1,21 @@
 using System.Security.Cryptography;
 using System.Text;
 
-public class EncryptService
+namespace MelonCryptor.Encryption;
+
+public class DefaultEncryptionService : IEncryptionService
 {
-	private byte[] _key;
-
-	public EncryptService(string passwrod)
+	private byte[] ConvertPasswordToKey(string password)
 	{
-		var sha256 = SHA256.Create();
-		_key = sha256.ComputeHash(Encoding.UTF8.GetBytes(passwrod));
-		Console.WriteLine($"Key generated successfully: {Convert.ToBase64String(_key)}");
+		using (var sha256 = SHA256.Create())
+		{
+			return sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+		}
 	}
 
-	public byte[] Encrypt(string data)
+	public byte[] Encrypt(byte[] data, string password)
 	{
-		return Encrypt(Encoding.UTF8.GetBytes(data));
-	}
-
-	public byte[] Encrypt(byte[] data)
-	{
+		var _key = ConvertPasswordToKey(password);
 		using (Aes aes = Aes.Create())
 		{
 			aes.Key = _key;
@@ -39,18 +36,19 @@ public class EncryptService
 		}
 	}
 
-	public byte[] Decrypt(byte[] encryptedData)
+	public byte[] Decrypt(byte[] data, string password)
 	{
+		var _key = ConvertPasswordToKey(password);
 		using (Aes aes = Aes.Create())
 		{
 			aes.Key = _key;
 
 			var iv = new byte[aes.IV.Length];
-			Array.Copy(encryptedData, 0, iv, 0, iv.Length);
+			Array.Copy(data, 0, iv, 0, iv.Length);
 
 			aes.IV = iv;
 
-			using (var ms = new MemoryStream(encryptedData, iv.Length, encryptedData.Length - iv.Length))
+			using (var ms = new MemoryStream(data, iv.Length, data.Length - iv.Length))
 			{
 				using (var decryptor = aes.CreateDecryptor())
 				{
