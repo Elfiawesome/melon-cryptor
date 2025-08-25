@@ -133,9 +133,9 @@ public class Webserver
 			case ("GET", "/api/get-vault-file"):
 				vaultPath = (request.QueryString.GetValues("vault") ?? throw new IOException("Invalid API Request"))[0];
 				password = (request.QueryString.GetValues("password") ?? throw new IOException("Invalid API Request"))[0];
-				var encryptedFileName = (request.QueryString.GetValues("encrypted-filename") ?? throw new IOException("Invalid API Request"))[0];
+				var encryptedFileId = (request.QueryString.GetValues("encrypted-file-id") ?? throw new IOException("Invalid API Request"))[0];
 				v = Vault.Open(vaultPath, password, new DefaultEncryptionService());
-				var data = v.GetFile(encryptedFileName);
+				var data = v.GetFile(encryptedFileId);
 				await SendRawResponseAsync(response, data);
 				break;
 			case ("POST", "/api/upload-file"):

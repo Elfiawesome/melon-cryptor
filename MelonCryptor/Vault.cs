@@ -6,6 +6,8 @@ namespace MelonCryptor;
 
 public class Vault
 {
+	public bool UseEncryption { get; private set; } = true; // To do set optional encryption for debugging later on
+	public int MaxFileSizeBytes { get; set; } = (1024 * 1024) * 99;
 	private readonly string _path;
 	private readonly IEncryptionService _encryptionService;
 	private readonly string _password;
@@ -121,27 +123,42 @@ public class Vault
 		AddFile(fileName, fileContent);
 	}
 
-	public void AddFile(string fileName, byte[] encryptedData)
+	public void AddFile(string fileName, byte[] fileData)
 	{
 		var originalFileName = Path.GetFileName(fileName);
 		var originalExtension = Path.GetExtension(fileName) ?? "";
-		var encryptedFileName = GenerateId() + FileExtension + originalExtension;
-		while (_index.Files.ContainsKey(encryptedFileName))
+
+		var fm = new FileModel();
+		var baseEncryptedFileId = GenerateId();
+		fm.Name = originalFileName;
+		fm.DateArchived = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+		using (var sr = new MemoryStream(fileData))
 		{
-			encryptedFileName = GenerateId() + FileExtension + originalExtension;
+			byte[] bufferChunk;
+			int chunkCount = 1;
+			int bytesRead = 1;
+			int bytesLeft = fileData.Length;
+			while (true)
+			{
+				if (bytesLeft < 0) { break; }
+				if (bytesLeft < MaxFileSizeBytes) { bufferChunk = new byte[bytesLeft]; } else { bufferChunk = new byte[MaxFileSizeBytes]; }
+				var encryptedFileName = baseEncryptedFileId + "." + chunkCount + FileExtension + originalExtension;
+				bytesRead = sr.Read(bufferChunk);
+				if (bytesRead == 0) { break; }
+				var encryptedPart = _encryptionService.Encrypt(bufferChunk, _password);
+				File.WriteAllBytes(Path.Combine(_path, encryptedFileName), encryptedPart);
+				fm.EncryptedFilePaths.Add(encryptedFileName);
+				chunkCount++;
+				bytesLeft -= bytesRead;
+			}
 		}
-
-		var encryptedContent = _encryptionService.Encrypt(encryptedData, _password);
-
-		_index.Files[encryptedFileName] = new();
-		_index.Files[encryptedFileName].Name = originalFileName;
-		File.WriteAllBytes(Path.Combine(_path, encryptedFileName), encryptedContent);
+		_index.Files[baseEncryptedFileId] = fm;
 		SaveChanges();
 	}
 
 	public void AddFolderContentsRecursively(string sourceFolderPath)
 	{
-		Console.WriteLine("Adding: "+sourceFolderPath);
+		Console.WriteLine("Adding: " + sourceFolderPath);
 		foreach (var filePath in Directory.GetFiles(sourceFolderPath))
 		{
 			AddFile(filePath);
@@ -156,16 +173,24 @@ public class Vault
 	}
 
 	// Get a file data
-	public byte[] GetFile(string encryptedFileName)
+	public byte[] GetFile(string encryptedFileId)
 	{
-		if (_index.Files.TryGetValue(encryptedFileName, out var file))
+		if (_index.Files.TryGetValue(encryptedFileId, out var fm))
 		{
-			var encryptedFilePath = Path.Combine(_path, encryptedFileName);
-			var encryptedContent = File.ReadAllBytes(encryptedFilePath);
-			var decryptedContent = _encryptionService.Decrypt(encryptedContent, _password);
-			return decryptedContent;
+			using (MemoryStream ms = new MemoryStream())
+			{
+				foreach (var encrptedFilePath in fm.EncryptedFilePaths)
+				{
+					var encryptedFilePath = Path.Combine(_path, encrptedFilePath);
+					var encryptedContent = File.ReadAllBytes(encryptedFilePath);
+					var decryptedPart = _encryptionService.Decrypt(encryptedContent, _password);
+					ms.Seek(0, SeekOrigin.End);
+					ms.Write(decryptedPart, 0, decryptedPart.Length);
+				}
+				return ms.ToArray();
+			}
 		}
-		throw new IOException($"Encrypted '{encryptedFileName}' file not found/recognized in vault");
+		throw new IOException($"Encrypted Id '{encryptedFileId}' file not found/recognized in vault");
 	}
 
 	public void ExtractFile(string encryptedFileName, string destinationFolder)
@@ -213,18 +238,22 @@ public class Vault
 		{
 			dirItems.Add(
 				new ReadOnlyDirItem(
-					ReadOnlyDirItem.ItemType.Directory,
+					vault.Key,
 					vault.Value.Name,
-					vault.Key
+					ReadOnlyDirItem.ItemType.Directory,
+					new List<string>() { vault.Key },
+					vault.Value.DateAdded
 			));
 		}
-		foreach (var vault in _index.Files)
+		foreach (var file in _index.Files)
 		{
 			dirItems.Add(
 				new ReadOnlyDirItem(
+					file.Key,
+					file.Value.Name,
 					ReadOnlyDirItem.ItemType.File,
-					vault.Value.Name,
-					vault.Key
+					file.Value.EncryptedFilePaths,
+					file.Value.DateArchived
 			));
 		}
 		return dirItems;
@@ -239,14 +268,23 @@ public record ReadOnlyDirItem
 		File
 	}
 
-	public ItemType Type { get; } = ItemType.Directory;
-	public string EncryptedName { get; } = "";
+	public string EncryptedNameId { get; } = "";
 	public string Name { get; } = "";
+	public ItemType Type { get; } = ItemType.Directory;
+	public IReadOnlyList<string> EncryptedNames { get; }
+	public long DateArchived { get; } = 0;
 
-	public ReadOnlyDirItem(ItemType type, string name, string encryptedName)
+	public ReadOnlyDirItem(
+		string encryptedNameId,
+		string name,
+		ItemType type,
+		List<string> encryptedNames,
+		long dateArchived)
 	{
-		Type = type;
-		EncryptedName = encryptedName;
+		EncryptedNameId = encryptedNameId;
 		Name = name;
+		Type = type;
+		EncryptedNames = encryptedNames;
+		DateArchived = dateArchived;
 	}
 }

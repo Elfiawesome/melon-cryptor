@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	function addDirItemToVaultTable(tableElement, directoryData) {
 		const fileName = directoryData['name'];
-		const encryptedFileName = directoryData['encrypted_name']
+		const encryptedFileId = directoryData['encrypted_name_id']
 		const fileExt = fileName.split('.').pop();
 		const dirType = directoryData['type'];
 
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (dirType == 1) {
 			// File
 			rowElement.addEventListener('click', function () {
-				getFileData(encryptedFileName).then(data => {
+				getFileData(encryptedFileId).then(data => {
 					const link = document.createElement('a');
 					link.href = URL.createObjectURL(data);
 					link.download = fileName;
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		} else {
 			// Folders
 			rowElement.addEventListener('click', function () {
-				openVault(vaultPath + '/' + encryptedFileName, password);
+				openVault(vaultPath + '/' + encryptedFileId, password);
 			});
 		}
 	}
@@ -165,11 +165,11 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 
-	function getFileData(encryptedFileName) {
+	function getFileData(encryptedFileId) {
 		const formData = new FormData();
 		formData.append('vault', vaultPath);
 		formData.append('password', password);
-		formData.append('encrypted-filename', encryptedFileName);
+		formData.append('encrypted-file-id', encryptedFileId);
 
 		const queryString = new URLSearchParams(formData).toString();
 		const url = `/api/get-vault-file?${queryString}`;
